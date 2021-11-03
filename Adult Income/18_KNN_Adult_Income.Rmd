@@ -1,0 +1,614 @@
+
+
+
+```{r}
+require(dplyr)
+require(readr)
+require(caTools)
+require(caret)
+require(ggplot2)
+
+```
+
+# load dataset
+```{r}
+data <- read_csv('E:/coaching/Data Science/R/dataset/Adult(KNN)/DataSet/adult.csv',show_col_types = FALSE)
+
+glimpse(data)
+
+```
+
+
+# missing data
+```{r}
+colSums(is.na(data))
+
+```
+
+# but we can see here ? , it seems to be missing values
+
+# we should replace ? with NAs
+
+```{r}
+data <- read_csv('E:/coaching/Data Science/R/dataset/Adult(KNN)/DataSet/adult.csv',show_col_types = FALSE, na = c("?","NA"))
+
+```
+
+```{r}
+#mismatch
+data <- mutate_if(data, is.character, tolower)
+
+# duplicates
+data <- distinct(data)
+
+```
+
+
+
+# univariate analysis and treat missing values also / CATEGORICAL COLUMNS
+```{r}
+sapply(data, n_distinct)
+
+```
+
+
+# WORK CLASS
+
+```{r}
+table(data$workclass)
+
+```
+
+# we should combine the categories for our convienence
+
+# never_worked or without_pay = jobless
+# local gov or state gov = government
+# self_emp_inc or not_inc = selfemployed
+
+```{r}
+data$workclass[data$workclass == "without-pay" | data$workclass == "never-worked"] <- "jobless"
+
+
+data$workclass[data$workclass == "local-gov" | data$workclass == "state-gov"|
+                 data$workclass=='federal-gov' | data$workclass == "government"] <- "government"
+
+
+data$workclass[data$workclass == "self-emp-inc" | data$workclass == "self-emp-not-inc"] <- "self-employed"
+
+```
+
+
+
+```{r}
+table(data$workclass)
+sum(is.na(data$workclass))
+
+```
+
+# we make the new category of unknown for missing values
+
+
+```{r}
+data$workclass[is.na(data$workclass)] <- "unknown"
+
+table(data$workclass)
+
+```
+
+
+
+
+# NATIVE COUNTRY
+```{r}
+
+summary(as.factor( data$`native-country`))
+
+```
+
+# we also combine the cities and country to their respective country
+
+# cambodia,china,hong,india,iran,japan,laos,phillippines,taiwan,thailand,vietnam - asia
+
+# canada,cuba,dominanican replubic,el-salvador,guatemala,haiti,honduras,jamaica,mexico
+# ,nicaragua,outlying-us,puerto,trinada, unitedstaes - north america
+
+# columbia,ecauado,peru <- south_america
+
+# england,france,germany,greece,holand-netherland,hungary,ireland,italy,poland,portugal,
+#  scotland,yugoslavia - europe
+
+# south,na - others
+
+
+
+```{r}
+data$`native-country`[data$`native-country`!="united-states"] <- "outside-united-states"
+
+```
+
+
+
+
+
+```{r}
+ggplot(data, aes(x = `native-country`, fill = income)) +geom_bar(position = 'fill')
+```
+
+
+```{r}
+data$`native-country`[is.na(data$`native-country`)]  <- "united-states"
+
+```
+
+
+
+```{r}
+summary(as.factor( data$`native-country`))
+
+```
+
+```{r}
+colSums(is.na(data))
+```
+
+
+```{r}
+# OCCUPATION
+
+table(data$occupation)
+
+```
+
+```{r}
+data$occupation[data$occupation=="other-service"|data$occupation=="priv-house-serv"|
+                  data$occupation=="protective-serv"] <- "services"
+
+data$occupation[data$occupation=="craft-repair"|data$occupation=="farming-fishing"|
+                  data$occupation=="handlers-cleaners"|data$occupation=="machine-op-inspct"|
+                  data$occupation=="transport-moving"] <- "blue_collar"
+
+data$occupation[data$occupation=="exec-managerial"|data$occupation=="prof-specialty"|
+                  data$occupation=="tech-support"] <- "white_collar"
+
+```
+
+
+
+```{r}
+data$occupation[is.na(data$occupation)] <- "unknown"
+
+sum(is.na(data$occupation))
+
+table(data$occupation)
+
+```
+
+  # NOW MISSING VALUES GONE
+
+# EDUCATION
+
+```{r}
+table(data$education)
+
+```
+
+# combine categories
+```{r}
+
+data$education[data$education=="10th"|data$education=="11th"|data$education=="12th"|
+                 data$education=="1st-4th"|data$education=="5th-6th"|data$education=="7th-8th"|
+                 data$education=="9th"|data$education=="preschool"] <- "school"
+
+data$education[data$education=="assoc-acdm"|data$education=="assoc-voc"|data$education=="prof-school"] <- 
+  "associate_and_voc"
+
+
+data$education[data$education=="bachelors"|data$education=="hs-grad"] <- "graduates"
+
+```
+
+
+```{r}
+table(data$education)
+
+
+colSums(is.na(data))
+
+```
+
+
+# EDUCATIONAL-NUM
+
+```{r}
+table(data$`educational-num`)
+
+```
+
+# MARITAL STATUS
+
+```{r}
+
+
+table(data$`marital-status`)
+
+data$`marital-status`[data$`marital-status`=="married-af-spouse"|data$`marital-status`=="married-civ-spouse"|
+                        data$`marital-status`=="married-spouse-absent"] <- "married"
+
+
+data$`marital-status`[data$`marital-status`=="never-married"] <- "unmarried"
+
+
+data$`marital-status`[data$`marital-status`=="divorced"|data$`marital-status`=="separated"|
+                        data$`marital-status`=="widowed"] <- "others"
+
+table(data$`marital-status`)
+
+```
+
+
+# RELATIONSHIP
+
+table(data$relationship)
+
+# RACE
+
+table(data$race)
+
+
+# GENDER
+
+table(data$gender)
+
+                               # CONTINOUS VARIABLES
+
+
+# AGE
+
+```{r}
+plot(quantile(data$age,seq(0,1,0.01)))
+
+data$age[data$age>74] <- 74
+
+```
+
+
+# FNLWGHT
+
+```{r}
+summary(data$fnlwgt)
+plot(quantile(data$fnlwgt,seq(0,1,0.01)))
+
+data$fnlwgt[data$fnlwgt > 509595.46] <- 509595.46
+
+```
+
+
+
+
+# capital gain
+
+```{r}
+summary(data$`capital-gain`)
+
+plot(quantile(data$`capital-gain`,seq(0,1,0.01)))
+
+quantile(data$`capital-gain`,seq(0,1,0.01))
+
+data$`capital-gain`[data$`capital-gain` > 15024] <- 15024
+
+```
+
+
+```{r}
+# capital loss
+summary(data$`capital-loss`)
+table(data$`capital-loss`,data$income)
+
+plot(quantile(data$`capital-loss`,seq(0,1,0.01)))
+
+quantile(data$`capital-loss`,seq(0,1,0.01))
+
+
+```
+
+
+# hours - per-week
+```{r}
+
+summary(data$`hours-per-week`)
+plot(quantile(data$`hours-per-week`,seq(0,1,0.01)))
+
+```
+
+
+```{r}
+data$`hours-per-week`[data$`hours-per-week`>80] <- 80
+
+```
+
+
+# BIVARIATE ANALYSIS AND VISULASIATIONS
+
+# AGE AND INCOME
+
+ggplot(data,aes(age))+geom_histogram(aes(fill = as.factor(data$income)),color="black",binwidth = 1)
+
+# AGE AND GENDER
+ggplot(data,aes(age))+geom_histogram(aes(fill = as.factor(data$gender)),color="black",binwidth = 1)
+
+ # workclass distribution
+ggplot(data,aes(x = workclass))+geom_bar(fill="skyblue")
+
+# more adults belongs to private_jobs
+ # WORKCLASS AND INCOME
+ggplot(data,aes(x=workclass,y=as.factor(income)))+geom_col()
+
+
+# FNLWGHT AND INCOME
+
+ggplot(data,aes(x=fnlwgt))+geom_histogram(fill=as.factor(data$income),color="black",binwidth = 1)
+
+
+#hours per-week
+
+ggplot(data,aes(x="hours-per-week")+geom_histogram(binwidth = 1)
+      
+
+#  marital status
+   # disribution of marital staus
+ggplot(data,aes(x = `marital-status`))+geom_bar(fill="skyblue")
+
+   # marital staus vs income
+ggplot(data,aes(x=income,fill=`marital-status`))+geom_bar(position = "dodge")
+
+```{r}
+df1 <- data.frame(table(data$income,data$`marital-status`))
+
+names(df1) <- c("income","status","count")
+
+
+ggplot(df1,aes(x=status,y=count,fill=income))+geom_bar(stat="identity")
+
+```
+
+
+
+# OCCUPATION
+    # distribution of occupation
+
+ggplot(data,aes(x=occupation))+geom_bar()
+
+    # occupation vs income
+
+ ggplot(data,aes(x=income,fill=occupation))+geom_bar(position = "dodge")
+
+df2 <- data.frame(table(data$income,data$occupation))
+
+names(df2) <- c("income","occu","count")
+
+
+ggplot(df2,aes(x=occu,y=count,fill=income))+geom_bar(stat="identity")
+
+
+# GENDER
+
+ggplot(data,aes(x=gender))+geom_bar()
+
+   # gender vs income
+
+ggplot(data,aes(x=income,fill=gender))+geom_bar(position = "dodge")
+
+df3 <- data.frame(table(data$income,data$gender))
+
+names(df3) <- c("income","gender","count")
+
+
+ggplot(df3,aes(x=gender,y=count,fill=income))+geom_bar(stat="identity")
+
+
+# RACE
+
+
+ggplot(data,aes(x=race))+geom_bar()
+
+# race vs income
+
+ggplot(data,aes(x=income,fill=race))+geom_bar(position = "dodge")
+
+df4 <- data.frame(table(data$income,data$race))
+
+names(df4) <- c("income","race","count")
+
+
+ggplot(df4,aes(x=race,y=count,fill=income))+geom_bar(stat="identity")
+
+# EDUCATION
+
+
+ggplot(data,aes(x=education))+geom_bar()
+
+# education vs income
+
+ggplot(data,aes(x=income,fill=education))+geom_bar(position = "dodge")
+
+df5 <- data.frame(table(data$income,data$education))
+
+names(df5) <- c("income","education","count")
+
+
+ggplot(df5,aes(x=education,y=count,fill=income))+geom_bar(stat="identity")
+
+
+# EDUCATIONAL-NUM
+colnames(data)
+ggplot(data,aes(x=`educational-num`))+geom_bar()
+
+# educationAL-NUM vs income
+
+ggplot(data,aes(x=income,fill=`educational-num`))+geom_bar(position = "dodge")
+
+df6 <- data.frame(table(data$income,data$`educational-num`))
+
+names(df6) <- c("income","education","count")
+
+
+ggplot(df6,aes(x=education,y=count,fill=income))+geom_bar(stat="identity")
+
+# RELATIONSHIP
+
+ggplot(data,aes(x=relationship))+geom_bar()
+
+# relationship vs income
+
+ggplot(data,aes(x=income,fill=relationship))+geom_bar(position = "dodge")
+
+df7 <- data.frame(table(data$income,data$relationship))
+
+names(df7) <- c("income","relationship","count")
+
+
+ggplot(df7,aes(x=relationship,y=count,fill=income))+geom_bar(stat="identity")
+
+# NATIVE COUNTRY
+
+ggplot(data,aes(x=`native-country`))+geom_bar()
+
+# `native-country` vs income
+
+ggplot(data,aes(x=income,fill=`native-country`))+geom_bar(position = "dodge")
+
+df8 <- data.frame(table(data$income,data$`native-country`))
+
+names(df8) <- c("income","country","count")
+
+
+ggplot(df8,aes(x=country,y=count,fill=income))+geom_bar(stat="identity")
+
+
+# DROPPING VARIABLES
+
+data$fnlwgt <- NULL    
+data$education <- NULL    bcz educational_num is given
+data$relationship <- NULL   no use in prediction
+
+
+# SOME OTHER ANAMOLIES
+
+```{r}
+data$income <- ifelse(data$income == "<=50k",0, 1)
+str(data)
+
+```
+
+
+
+# feature scaling
+
+```{r}
+data[,c(1,3,5, 11:13)] <- sapply(data[,c(1,3,5, 11:13)], scale)
+
+```
+
+# MODEL BUILDING
+
+
+```{r}
+summary(data)
+```
+
+
+```{r}
+require(dummies)
+final_data <- dummy.data.frame(as.data.frame(data))
+```
+
+
+
+# split data in to train and test
+
+```{r}
+
+set.seed(111)
+i <- sample.split(final_data$income , SplitRatio = 0.75)
+
+train <- final_data[i,]
+
+test <- final_data[!i,]
+
+
+```
+
+
+```{r}
+
+
+train_labels <- as.factor(train$income)
+
+test_labels <- as.factor(test$income)
+
+
+```
+
+
+                                       # KNN
+
+```{r}
+require(class)
+
+help(knn)
+
+```
+
+```{r}
+
+knn_labels <- knn(train = train[,-43], cl = train_labels, test = test[,-43], k = 5)
+
+
+```
+
+
+# CONFUSION MATRIX 
+```{r}
+confusionMatrix(knn_labels, test_labels, positive = "1")
+
+```
+
+```{r}
+knn_labels <- knn(train = train[,-43], cl = train_labels, test = test[,-43], k = 10)
+
+confusionMatrix(knn_labels, test_labels, positive = "1")
+
+```
+```{r}
+cm <- confusionMatrix(knn_labels, test_labels, positive = "1")
+```
+
+```{r}
+k_optm <- data.frame(k=rep(0,50), acc =rep(0,50), sens=rep(0,50), spec=rep(0,50))
+```
+
+
+```{r}
+k_optm <- data.frame(k=rep(0,50), acc =rep(0,50), sens=rep(0,50), spec=rep(0,50))
+
+for (i in 2:50) {
+  knn_labels <- knn(train = train[,-43], cl = train_labels, test = test[,-43], k = i)
+  cm <- confusionMatrix(knn_labels, test_labels, positive = "1")
+  
+  k_optm$k = 1
+  k_optm$acc[i] <- cm$overall[1]
+  k_optm$sens[i] <- cm$byClass[1]
+  k_optm$spec[i] <- cm$byClass[2]
+  }
+```
+
+```{r}
+k_optm[which.max(k_optm$acc),]
+```
+```{r}
+k_optm[which.max(k_optm$sens),]
+```
+```{r}
+k_optm[which.max(k_optm$spec),]
+```
+
