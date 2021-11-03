@@ -1,0 +1,316 @@
+```{r}
+#Import Dataset
+
+require(readr)
+churn <- read_csv('E:/coaching/Data Science/R/dataset/Churn (end to end project)/Dataset/Churn.csv', show_col_types = FALSE)
+
+str(churn)
+```
+
+```{r}
+#Avoiding case mismatch
+
+require(dplyr)
+churn <- mutate_if(churn, is.character, tolower)
+```
+
+```{r}
+# Removing duplicates
+
+churn <- distinct(churn)
+```
+
+
+```{r}
+# Checking missing values
+
+churn[which(is.na(churn$TotalCharges)), ]
+```
+
+```{r}
+11/ nrow(churn)*100
+# Percentage of NA is very low and there is no information for them,so we will drop these rows
+```
+```{r}
+#Removing Na rows
+churn <- churn[complete.cases(churn), ]
+
+#dropping CustomerID column as it is of no use to us
+churn$customerID <- NULL
+```
+
+```{r}
+summary(churn)
+```
+
+
+```{r}
+#EDA
+
+dplyr::count(churn,gender, sort = TRUE)
+```
+
+```{r}
+dplyr::count(churn,SeniorCitizen, sort = TRUE)
+```
+```{r}
+require(ggplot2)
+ggplot(data = churn, aes(x = factor(Churn), y = SeniorCitizen, fill = Churn)) +geom_boxplot()
+#Explanation - High churn for those with who are senior citizen
+```
+
+
+```{r}
+dplyr::count(churn,Partner, sort = TRUE)
+```
+
+
+```{r}
+dplyr::count(churn,Dependents, sort = TRUE)
+```
+```{r}
+dplyr::count(churn,tenure, sort = TRUE)
+```
+
+```{r}
+ggplot(data = churn, aes(x = factor(Churn), y = tenure, fill = Churn)) +geom_boxplot()
+#Explanation - High churn for those with lower tenures
+```
+
+
+```{r}
+dplyr::count(churn,PhoneService, sort = TRUE)
+```
+
+```{r}
+dplyr::count(churn,MultipleLines, sort = TRUE)
+#Changing the name of the value
+
+churn$MultipleLines[churn$MultipleLines == 'no phone service'] <- 'no'
+```
+
+```{r}
+dplyr::count(churn,InternetService, sort = TRUE)
+```
+
+
+```{r}
+dplyr::count(churn,OnlineSecurity, sort = TRUE)
+#Changing the name of the value
+
+churn$OnlineSecurity[churn$OnlineSecurity == 'no internet service'] <- 'no'
+```
+
+
+```{r}
+dplyr::count(churn,OnlineBackup, sort = TRUE)
+#Changing the name of the value
+
+churn$OnlineBackup[churn$OnlineBackup == 'no internet service'] <- 'no'
+```
+
+
+```{r}
+dplyr::count(churn,DeviceProtection, sort = TRUE)
+#Changing the name of the value
+
+churn$DeviceProtection[churn$DeviceProtection == 'no internet service'] <- 'no'
+```
+
+```{r}
+dplyr::count(churn,TechSupport, sort = TRUE)
+#Changing the name of the value
+
+churn$TechSupport[churn$TechSupport == 'no internet service'] <- 'no'
+```
+
+
+```{r}
+dplyr::count(churn,StreamingTV, sort = TRUE)
+#Changing the name of the value
+
+churn$StreamingTV[churn$StreamingTV == 'no internet service'] <- 'no'
+```
+
+
+```{r}
+dplyr::count(churn,StreamingMovies, sort = TRUE)
+#Changing the name of the value
+
+churn$StreamingMovies[churn$StreamingMovies == 'no internet service'] <- 'no'
+```
+
+
+```{r}
+dplyr::count(churn,Contract, sort = TRUE)
+```
+
+
+```{r}
+dplyr::count(churn,PaperlessBilling, sort = TRUE)
+```
+
+```{r}
+dplyr::count(churn,PaymentMethod, sort = TRUE)
+```
+
+```{r}
+dplyr::count(churn,MonthlyCharges, sort = TRUE)
+```
+
+
+```{r}
+ggplot(data = churn, aes(x = factor(Churn), y = MonthlyCharges, fill = Churn))+geom_boxplot()
+#Explanation - Higher churn for those with higher than avg monthly charges
+```
+
+
+```{r}
+dplyr::count(churn,TotalCharges, sort = TRUE)
+```
+
+```{r}
+ggplot(data = churn, aes(x = factor(Churn), y = TotalCharges, fill = Churn)) +geom_boxplot()
+#Explanation - Lower churn for those with lower than avg total charges
+```
+
+```{r}
+require(corrplot)
+numeric.var <- sapply(churn, is.numeric)
+corr.matrix <- cor(churn[,numeric.var])
+corrplot(corr.matrix, main="\n\nCorrelation Plot for Numerical Variables", method="number")
+```
+
+```{r}
+# The Monthly Charges and Total Charges are highly correlated with correlation of 0.65. So one of them will be removed from the model. We remove Total Charges.
+
+churn$TotalCharges <- NULL
+```
+
+
+```{r}
+dplyr::count(churn,Churn, sort = TRUE)
+```
+
+```{r}
+min(churn$tenure); max(churn$tenure)
+```
+# There are min 1 month and 72 month duratuion. So we can make some groups in the following.
+
+```{r}
+# Feature Engineering
+
+group_tenure <- function(tenure){
+    if (tenure >= 0 & tenure <= 12){
+        return('0-12 Month')
+    }else if(tenure > 12 & tenure <= 24){
+        return('12-24 Month')
+    }else if (tenure > 24 & tenure <= 48){
+        return('24-48 Month')
+    }else if (tenure > 48 & tenure <=60){
+        return('48-60 Month')
+    }else if (tenure > 60){
+        return('> 60 Month')
+    }
+}
+churn$tenure_group <- sapply(churn$tenure,group_tenure)
+churn$tenure_group <- as.factor(churn$tenure_group)
+```
+
+```{r}
+library(plyr)
+library(dplyr)
+
+churn$SeniorCitizen <- as.factor(mapvalues(churn$SeniorCitizen,
+                                      from=c("0","1"),
+                                      to=c("No", "Yes")))
+```
+
+
+```{r}
+churn$tenure <- NULL
+```
+
+
+```{r}
+#splitting the data into training and testing sets
+require(caTools)
+set.seed(999)
+
+
+index<- sample.split(churn$Churn, SplitRatio = 0.75)
+
+train<- churn[index, ]
+test<- churn[-index,]
+```
+
+```{r}
+dim(train); dim(test)
+```
+
+                                     #LOGISTIC REGRESSION
+
+```{r}
+LogModel <- glm(as.factor(Churn) ~ .,family=binomial(link="logit"),data=train)
+print(summary(LogModel))
+```
+
+# Step Wise Reduction
+```{r}
+LogModel_2 <- step(LogModel)
+
+summary(LogModel_2)
+```
+
+```{r}
+require(car)
+
+vif(LogModel_2)
+```
+
+```{r}
+LogModel_3 <-glm(formula = as.factor(Churn) ~ SeniorCitizen + Dependents + 
+    MultipleLines + InternetService + OnlineSecurity + DeviceProtection + 
+    TechSupport + StreamingTV + StreamingMovies + Contract + 
+    PaperlessBilling + PaymentMethod + tenure_group, 
+    family = binomial(link = "logit"), data = train)
+
+summary(LogModel_3)
+
+```
+# Since AIC is inc so we will go with model 2
+
+```{r}
+test$Churn[test$Churn =="no"] <- 0
+test$Churn[test$Churn =="yes"] <- 1
+```
+`
+```{r}
+str(test$Churn)
+```
+
+
+```{r}
+prob_prom <- predict(LogModel_2, newdata = test, type = 'response')
+
+summary(prob_prom)
+
+pred_prom <- as.factor(ifelse(prob_prom > 0.31, 1, 0))
+
+act_prom <- as.factor(test$Churn)
+
+require(caret)
+confusionMatrix(pred_prom, act_prom, positive = '1')
+```
+
+                                   #DECISION TREE
+
+```{r}
+require(rpart)
+tree <- rpart(Churn~., data = train)
+
+require(rpart.plot)
+prp(tree)
+```
+
+
