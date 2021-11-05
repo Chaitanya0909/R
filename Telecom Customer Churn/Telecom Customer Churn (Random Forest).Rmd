@@ -1,0 +1,265 @@
+---
+title: "Telecom "
+output: html_notebook
+---
+
+
+```{r}
+require(readr)
+
+df <- read.csv('D:/train.csv')
+
+str(df)
+```
+
+
+```{r}
+require(dplyr)
+df <- distinct(df)
+
+dim(df)
+```
+
+
+```{r}
+summary(df)
+```
+
+
+```{r}
+colSums(is.na(df))
+```
+
+
+```{r}
+table(df$price_range)
+```
+
+
+```{r}
+df$price_range <- as.factor(df$price_range)
+```
+
+
+
+```{r}
+require(caTools)
+
+set.seed(999)
+
+i <- sample.split(df$price_range, SplitRatio = 0.75)
+
+train_df <- df[i, ]
+
+test_df <- df[!i, ]
+```
+
+
+```{r}
+prop.table(table(df$price_range))
+
+prop.table(table(train_df$price_range))
+
+prop.table(table(test_df$price_range))
+
+```
+
+
+```{r}
+require(rpart)
+require(rpart.plot)
+
+dt_model <- rpart(price_range ~ ., data = train_df)
+
+prp(dt_model)
+
+```
+
+
+```{r}
+price_range_pred <- predict(dt_model, newdata = test_df, type = 'class')
+
+
+summary(price_range_pred)
+```
+
+
+
+```{r}
+require(caret)
+
+confusionMatrix(price_range_pred, test_df$price_range)
+```
+
+
+
+```{r}
+require(randomForest)
+
+rf_model <- randomForest(price_range ~ ., data = train_df, ntree = 500, do.trace = 100, importance = T)
+```
+
+
+```{r}
+price_range_pred <- predict(rf_model, newdata = test_df)
+
+summary(price_range_pred)
+```
+
+
+```{r}
+confusionMatrix(price_range_pred, test_df$price_range)
+```
+
+
+
+```{r}
+
+importance(rf_model)
+
+varImpPlot(rf_model)
+
+```
+
+
+########################################################################################
+
+
+```{r}
+str(df)
+```
+
+
+```{r}
+df[,-c(2,4,6,18:21)] <- sapply(df[,-c(2,4,6,18:21)], scale)
+
+```
+
+
+
+```{r}
+summary(df)
+```
+
+
+
+```{r}
+sapply(df[,-c(2,4,6,18:21)] , function(x) plot(quantile(x, seq(0,1,0.01))))
+```
+
+
+
+```{r}
+require(caTools)
+
+set.seed(999)
+
+i <- sample.split(df$price_range, SplitRatio = 0.75)
+
+train_df <- df[i, ]
+
+test_df <- df[!i, ]
+```
+
+
+
+
+
+```{r}
+require(class)
+k_optm <- data.frame(k = rep(0,100), acc = rep(0,100))
+
+for (i  in 1:100) {
+  knn_labels <- knn(train = train_df[,-21], cl = train_df$price_range, test = test_df[,-21], k = i)
+  cm <- confusionMatrix(knn_labels, test_df$price_range)
+
+  k_optm$k[i] <- i
+  k_optm$acc[i] <- cm$overall[1]
+  }
+
+
+
+```
+
+
+```{r}
+plot(k_optm$acc, type = 'o')
+
+k_optm$k[which.max(k_optm$acc)]
+```
+
+
+
+```{r}
+knn_labels <- knn(train = train_df[,-21], cl = train_df$price_range, test = test_df[,-21], k = 47)
+
+confusionMatrix(knn_labels, test_df$price_range)
+
+```
+
+
+```{r}
+df[ , c(2,4,6,18:21)] <- sapply(df[ , c(2,4,6,18:21)], as.character)
+
+df <- mutate_if(df, is.character, as.factor)
+
+require(caTools)
+
+set.seed(999)
+
+i <- sample.split(df$price_range, SplitRatio = 0.75)
+
+train_df <- df[i, ]
+
+test_df <- df[!i, ]
+```
+
+
+
+```{r}
+str(df)
+```
+
+
+
+
+
+```{r}
+rf_model <- randomForest(price_range ~ ., data = train_df, ntree = 500, do.trace = 100, importance = T)
+
+```
+
+
+
+```{r}
+price_range_pred <- predict(rf_model, newdata = test_df)
+
+summary(price_range_pred)
+```
+
+
+```{r}
+confusionMatrix(price_range_pred, test_df$price_range)
+```
+
+
+
+```{r}
+
+importance(rf_model)
+
+varImpPlot(rf_model)
+
+```
+
+
+
+```{r}
+?randomForest
+```
+
+
+
+
+
+
