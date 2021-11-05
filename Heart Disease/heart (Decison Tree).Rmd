@@ -1,0 +1,230 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+heart <- read.csv('heart.csv')
+
+head(heart, n=10)
+
+```
+
+
+```{r}
+names(heart)
+```
+
+
+```{r}
+heart[ , c(2, 3, 6, 7, 9, 11, 12)] <- as.data.frame(sapply(heart[ , c(2, 3, 6, 7, 9, 11, 12)], as.character))
+
+str(heart)
+```
+
+
+```{r}
+table(heart$heart.disease)
+
+require(dplyr)
+heart <- distinct(heart)
+```
+
+```{r}
+colSums(is.na(heart))
+```
+
+
+
+```{r}
+
+library(caTools)
+
+set.seed(100)
+i = sample.split(heart$heart.disease, SplitRatio = 0.8)
+
+train <- heart[i,]
+
+val <- heart[!i,]
+
+prop.table( table(heart$heart.disease)) * 100
+
+prop.table( table(train$heart.disease)) * 100
+
+prop.table( table(val$heart.disease)) * 100
+```
+
+
+
+
+```{r}
+require(rpart)
+
+dtm_1 <- rpart(heart.disease ~ ., data = train)
+
+summary(dtm_1)  
+```
+
+
+
+
+```{r}
+require(rpart.plot)
+
+prp(dtm_1)
+```
+
+
+
+
+```{r}
+table(heart$heart.disease[which(heart$thal < 5)])
+
+prop.table(table(heart$heart.disease[which(heart$thal < 5)]))
+```
+
+
+
+
+```{r}
+prop.table(table(heart$heart.disease[which(heart$thal < 5 & heart$flouroscopy.coloured == 0)]))
+
+```
+
+
+```{r}
+prop.table(table(heart$heart.disease[which(heart$thal < 5 & heart$flouroscopy.coloured == 0 & heart$BP < 156)]))
+
+```
+
+
+
+```{r}
+
+dt_pred <- predict(dtm_1, newdata = val)
+
+
+```
+
+
+
+
+```{r}
+val$pred <- ifelse(dt_pred[,2] > 0.25 , 'Yes' , 'No'   )
+```
+
+
+
+```{r}
+require(caret)
+
+confusionMatrix(as.factor(val$pred) , as.factor(val$heart.disease) , positive = 'Yes')
+```
+
+
+
+
+Tuning hyperpameters :
+
+
+```{r}
+dtm_2 <- rpart(heart.disease ~ ., data = train, control = rpart.control(maxdepth = 2))
+
+
+par(mfrow = c(1,2))
+
+prp(dtm_2)
+prp(dtm_1)
+
+
+
+```
+
+
+```{r}
+dt_pred <- predict(dtm_2, newdata = val)
+
+val$pred <- as.factor(ifelse(dt_pred[,2] >= 0.40, "Yes", "No"))
+
+confusionMatrix(val$pred, as.factor(val$heart.disease), positive = "Yes")
+
+```
+
+
+
+```{r}
+
+dtm_3 <- rpart(heart.disease ~ ., data = train, control = rpart.control(minsplit =25))
+
+par(mfrow = c(1,2))
+
+prp(dtm_3)
+prp(dtm_1)
+
+
+```
+
+
+```{r}
+dt_pred <- predict(dtm_3, newdata = val)
+
+val$pred <- as.factor(ifelse(dt_pred[,2] >= 0.50, "Yes", "No"))
+
+confusionMatrix(val$pred, as.factor(val$heart.disease), positive = "Yes")
+
+
+```
+
+
+
+
+```{r}
+dtm_4 <- rpart(heart.disease ~ ., data = train, control = rpart.control(minbucket = 10))
+
+par(mfrow = c(1,2))
+
+prp(dtm_4)
+prp(dtm_1)
+
+```
+
+
+
+
+```{r}
+dt_pred <- predict(dtm_4, newdata = val)
+
+val$pred <- as.factor(ifelse(dt_pred[,2] >= 0.40, "Yes", "No"))
+
+confusionMatrix(val$pred, as.factor(val$heart.disease), positive = "Yes")
+
+
+```
+
+
+```{r}
+
+dtm_5 <- rpart(heart.disease ~ ., data = train, control = rpart.control(cp = 0.02))
+
+par(mfrow = c(1,2))
+
+prp(dtm_5)
+prp(dtm_1)
+
+
+```
+
+
+```{r}
+dt_pred <- predict(dtm_5, newdata = val)
+
+val$pred <- as.factor(ifelse(dt_pred[,2] >= 0.25, "Yes", "No"))
+
+confusionMatrix(val$pred, as.factor(val$heart.disease), positive = "Yes")
+
+
+```
+
+
+
