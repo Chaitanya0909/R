@@ -1,0 +1,137 @@
+title: "Logistic Regression on Diabetes dataset"
+
+```{r}
+require(readr)
+diabetes = read_csv('E:/coaching/Data Science/R/dataset/diabetes (Logistic_Regression)/Dataset/diabetes.csv',show_col_types = FALSE) 
+```
+
+```{r}
+str(diabetes)
+```
+
+
+# Check missing values
+```{r}
+colSums((is.na(diabetes)))
+```
+# Removing duplicate values
+```{r}
+require(dplyr)
+diabetes <- distinct(diabetes)
+```
+
+```{r}
+summary(diabetes)
+str(diabetes)
+```
+#there are no duplicate values
+
+```{r}
+sapply(diabetes, function(x) plot(quantile(x, seq(0,1,0.01))))
+```
+# Outlier Treatment
+```{r}
+diabetes$SkinThickness[which(diabetes$SkinThickness > 51.33)] <- 51.33
+diabetes$Insulin[which(diabetes$Insulin > 519.90)] <- 519.90
+diabetes$DiabetesPedigreeFunction[which(diabetes$DiabetesPedigreeFunction > 1.69)] <- 1.69
+```
+
+```{r}
+summary(diabetes)
+str(diabetes)
+```
+
+```{r}
+diabetes[-9] <- sapply(diabetes[-9], scale)
+```
+
+```{r}
+summary(diabetes)
+```
+
+```{r}
+barplot(table(diabetes$Outcome), col="red")
+```
+
+                               
+                               # LOGISTTIC REGRESSION
+```{r}
+require(caTools)
+set.seed(999)
+
+i <- sample.split(diabetes$Outcome, SplitRatio = 0.75)
+
+train_df <- diabetes[i, ]
+
+test_df <- diabetes[!i, ]
+```
+
+```{r}
+prop.table(table(diabetes$Outcome)) * 100
+
+prop.table(table(train_df$Outcome)) * 100
+
+prop.table(table(test_df$Outcome)) * 100
+```
+
+```{r}
+lrm_1 <- glm(Outcome~ ., data = train_df[ ,-1])
+
+summary(lrm_1)
+```
+                       
+
+#AKAIKE INFORMATION CRITERION
+
+
+```{r}
+#Step reduction
+lrm_2 <- step(lrm_1)
+
+summary(lrm_2)
+```
+
+# VIF Check
+
+```{r}
+require(car)
+
+vif(lrm_2)
+```
+                         
+```{r}
+summary(lrm_2)
+```
+  
+# RemovingDiabetesPedigreeFunction                        
+```{r}
+lrm_3 <- glm(formula = Outcome ~ Glucose + BloodPressure + BMI + 
+    Age, data = train_df[, -1])
+
+summary(lrm_3)
+```
+
+# Removing BloodPressure
+```{r}
+lrm_4 <- glm(formula = Outcome ~ Glucose + BMI + Age, 
+    data = train_df[, -1])
+
+summary(lrm_4)
+```
+                
+
+```{r}
+test_df$pred_outcome <- predict(lrm_4, newdata = test_df, type = 'response')
+
+summary(test_df$pred_outcome)
+```
+
+```{r}
+test_df$pred_out <- ifelse(test_df$pred_outcome > 0.383 , 1 , 0)
+```
+
+```{r}
+require(caret)
+
+confusionMatrix(as.factor(test_df$pred_out), as.factor(test_df$Outcome), positive = '1')
+```
